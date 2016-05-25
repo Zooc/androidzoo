@@ -1,4 +1,4 @@
-package xyz.codezoo.waul.util;
+package xyz.codezoo.waul.util.tips;
 
 import android.support.design.widget.Snackbar;
 import android.view.View;
