@@ -1,26 +1,107 @@
+import java.security.MessageDigest
+
 apply plugin: 'com.android.library'
 
+def version = 100
+def isDebug = true
+
+def gitBranchName(){
+    def cmd = "git symbolic-ref --short -q HEAD"
+    return cmd.execute().text.trim()
+}
+
+def generateMd5(final file){
+    MessageDigest digest = MessageDigest.getInstance("MD5")
+    file.withInputStream(){is ->
+    byte[] buffer = new byte[8192]
+        int read = 0
+        while((read=is.read(buffer))>0){
+            digest.update(buffer,0,read);
+        }
+    }
+
+    byte[] md5Sum = digest.digest()
+    BigInteger bigInteger = new BigInteger(1,md5Sum)
+    return bigInteger.toString(16)
+}
+
+
 android {
-    compileSdkVersion 23
-    buildToolsVersion "23.0.1"
+    compileSdkVersion 25
+    buildToolsVersion "25.0.3"
 
     defaultConfig {
-        minSdkVersion 16
-        targetSdkVersion 23
+        minSdkVersion 14
+        targetSdkVersion 25
         versionCode 1
         versionName "1.0"
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
     }
+
+    lintOptions {
+        abortOnError false
+    }
+
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+
+        debug{
+
+        }
+
+        libraryVariants.all { variant ->
+            variant.outputs.each { output ->
+//                def outputFile = output.outputFile
+//                if (outputFile != null && outputFile.name.endsWith('.apk')) {
+//
+//                    File outputDirectory = new File(outputFile.parent)
+//                    def fileName
+//                    if (variant.buildType.name == "release") {
+//                        // release版本输出apk名称：ziwork_v1.0_2015-11-13_wandoujia.apk
+//                        fileName = "ziwork_v${defaultConfig.versionName}_${variant.productFlavors[0].name}.apk"
+//                    } else {
+//                        fileName = "ziwork_v${defaultConfig.versionName}_beta.apk"
+//                    }
+//                    output.outputFile = new File(outputFile.parent, fileName)
+//                }
+
+                def outputFile = output.outputFile
+                def fileName
+                if(outputFile!=null&&outputFile.name.endsWith('.aar')){
+                    if(variant.buildType.name=="release"){
+                        fileName = "release/anzoo_"+version+".aar"
+                    }else{
+                        fileName = "debug/anzoo_"+version+".aar"
+                    }
+                    output.outputFile = new File(outputFile.parent,fileName)
+                }
+            }
+        }
+
     }
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(include: ['*.jar'], dir: 'libs')
+    androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    })
+    compile 'com.android.support:appcompat-v7:25.3.1'
     testCompile 'junit:junit:4.12'
-    compile 'com.android.support:appcompat-v7:23.1.0'
-    compile 'com.android.support:design:23.1.0'
+    compile project(':javazoo')
+}
+
+task copyTask(type: Copy) {
+    if(isDebug){
+        from 'build/outputs/aar/debug/anzoo_'+version+'.aar'
+        into '../app/libs/'
+    }else{
+        from 'build/outputs/aar/release/anzoo_'+version+'.aar'
+        into '../app/libs/'
+    }
 }
